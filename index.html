@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: url(img/bg.jpeg);
+            background-size: cover;
+        }
+
+        .btn {
+            width: 20vw;
+            height: 5vh;
+            color: #fff;
+            text-align: center;
+            line-height: 10vw;
+            border-radius: 2vw;
+        }
+
+        .title {
+            width: 100%;
+            height: 20vh;
+            line-height: 20vh;
+            text-align: center;
+            color: #fff;
+            font-size: 24px;
+        }
+
+        .message {
+            width: 95vw;
+            height: 20vh;
+            background: rgba(0, 0, 0, 0.56);
+            padding: 10px;
+            position: relative;
+            margin: 0 auto;
+            border-radius: 2vw;
+        }
+
+        .weather {
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .temp {
+            font-size: 40px;
+            color: #fff;
+        }
+
+        .temp24 {
+            width: 100%;
+            height: 100vw;
+            background: #fff;
+
+        }
+
+        .temp span {
+            font-size: 20px;
+            color: #ccc;
+        }
+
+        .daily {
+            width: 100%;
+            height: 35vh;
+            background: red;
+        }
+
+        .wind {
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .imgbox {
+            width: 20vw;
+            height: 20vw;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+
+        .time {
+            font-size: 12px;
+            color: #eee;
+        }
+
+        #main {
+        }
+
+        .mask {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: rgba(0, 0, 0, 0.66);
+            display: none;
+            color:#fff;
+        }
+        .mask div{
+            width:20vw;
+            height:10vh;
+            background:#f33;
+            float:left;
+            text-align: center;
+            line-height: 10vh;
+        }
+
+    </style>
+</head>
+<body>
+<div class="btn">选择</div>
+<h3 class="title"><span id="city"></span>天气预报</h3>
+<section class="message">
+    <div class="weather">晴</div>
+    <div class="temp">
+        12℃
+        <span class="low">1</span>
+        <span>~</span>
+        <span class="high">15℃</span>
+    </div>
+    <div class="wind">
+        <span>西北风</span>
+        <span>四级</span>
+    </div>
+    <div class="time">111</div>
+    <div class="imgbox">
+        <img src="img/day/1.png" alt="">
+    </div>
+</section>
+<div class="temp24">
+    <div id="main" style="width:100vw;height:100vw;"></div>
+</div>
+<div class="daily">
+    <table>
+        <thead>
+        <th>日期</th>
+        <th>天气</th>
+        <th>图片</th>
+        <th>气温</th>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+    </table>
+</div>
+<div class="mask"></div>
+</body>
+<script src="jquery.min.js"></script>
+<script src="echarts.min.js"></script>
+<script>
+    $.getScript("http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=js", function () {
+        $("#city").html(remote_ip_info.city);
+        getData(remote_ip_info.city);
+    });
+    function getData(city) {
+        $.ajax({
+            url: "http://api.jisuapi.com/weather/query?appkey=c18309f2dbc80b51",
+            data: {city},
+            dataType: "jsonp",
+            success: function (r) {
+                var data=r.result;
+                var str="";
+                str+=`
+                  <div class="weather">${data.weather}</div>
+                 <div class="temp">
+           ${data.temp}℃
+        <span class="low">${data.templow}</span><span>~</span><span class="high">${data.temphigh}℃</span>
+    </div>
+    <div class="wind">
+        <span>${data.winddirect}</span>
+        <span>${data.windpower}</span>
+    </div>
+    <div class="time">更新时间：  ${data.updatetime}</div>
+    <div class="imgbox">
+        <img src="img/day/${data.img}.png" alt="">
+    </div>
+                 `;
+                $(".message").html(str);
+                var str2="";
+                var data=r.result.daily;
+                $.each(data, function (index, val) {
+                    str2+=`
+                   <tr>
+                    <td>${val.date}</td>
+                    <td>${val.day.weather}</td>
+                    <td><img src="img/day/${val.day.img}.png" alt=""></td>
+                    <td>${val.night.templow}~${val.day.temphigh}</td>
+                   </tr>
+                   `
+                });
+                $("tbody").html(str2);
+                var arr1=[], arr2=[];
+                var data=r.result.hourly;
+                $.each(data, function (index, val) {
+                    arr1.push(val.time);
+                    arr2.push(val.temp);
+                });
+                arr1.slice(0, 7);
+                arr2.slice(0, 7);
+                setCharts(arr1, arr2);
+            }
+        })
+    }
+    function setCharts(arr1, arr2) {
+        var myChart=echarts.init(document.getElementById('main'));
+        var option={
+            xAxis: {
+                type: 'category',
+                data: arr1
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [{
+                data: arr2,
+                type: 'line'
+            }]
+        };
+        myChart.setOption(option);
+    }
+    // d3 echarts
+    var citys=[];
+    $(".btn").click(function () {
+        $(".mask").show();
+        $.ajax({
+            url: "http://api.jisuapi.com/weather/city?appkey=c18309f2dbc80b51",
+            dataType: "jsonp",
+            success: function (r) {
+              citys=r.result;
+              var province=$.grep(citys,function(ele,index){
+                  if(ele.parentid==="0"){
+                      return true;
+                  }
+              });
+              var str="";
+              $.each(province,function(index,val){
+                  str+=`
+                    <div id="${val.cityid}" class="province">${val.city}</div>
+                  `
+              })
+              $(".mask").html(str);
+            }
+        })
+    });
+    $(".mask").on("click",".province",function(){
+        var id=$(this).attr("id");
+        var area=$.grep(citys,function(ele,index){
+            if(ele.parentid==id){
+                return true;
+            }
+        });
+        var str="";
+        $.each(area,function(index,val){
+          str+=`
+            <div class="city">${val.city}</div>
+          `
+        });
+        $(".mask").html(str);
+    })
+    $(".mask").on("click",".city",function(){
+        var name=$(this).html();
+        $(".mask").empty().hide();
+        $("#city").html(name);
+        getData(name);
+    })
+</script>
+// 个人主页
+// 移动 苏宁 小米
+// 企业网站
+// 画板 todolist  天气app  打字游戏
+</html>
